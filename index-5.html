@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Delta Prints | DTU 🖨️📄</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { cairo: ['Cairo', 'sans-serif'] },
+          colors: {
+            brand: {
+              50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
+              400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
+              800: '#1e40af', 900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Cairo', sans-serif; }
+    .drop-zone.dragover {
+      border-color: #2563eb !important;
+      background-color: #eff6ff !important;
+    }
+    .file-item { animation: fadeIn 0.25s ease; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .spinner {
+      border: 3px solid #e5e7eb;
+      border-top: 3px solid #2563eb;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    input[type="file"] {
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0); border: 0;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen text-slate-800">
+
+  <!-- Header -->
+  <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+    <div class="max-w-3xl mx-auto px-4 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-brand-600 to-indigo-600 flex items-center justify-center text-xl shadow-lg shadow-brand-500/30">
+          🖨️
+        </div>
+        <div>
+          <h1 class="text-lg font-extrabold text-brand-800 leading-tight">Delta Prints</h1>
+          <p class="text-[11px] text-slate-500 font-medium">DTU • جامعة الدلتا</p>
+        </div>
+      </div>
+      <div class="text-left">
+        <div class="text-[11px] text-slate-500">الطلبات</div>
+        <div id="requestCount" class="text-lg font-bold text-brand-700">0</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto px-4 py-6">
+
+    <!-- Hero -->
+    <div class="text-center mb-7">
+      <h2 class="text-2xl md:text-3xl font-extrabold text-slate-800 mb-1.5">اطبع ورقك بسهولة 📄</h2>
+      <p class="text-slate-600 text-sm">ارفع ملفاتك، احسب السعر، وابعت الطلب مباشرة على واتساب</p>
+      <div class="mt-3 inline-flex items-center gap-2 bg-amber-50 text-amber-800 text-sm font-medium px-4 py-1.5 rounded-full border border-amber-200">
+        سعر الورقة: <strong>١ جنيه</strong>
+      </div>
+    </div>
+
+    <!-- Form Card -->
+    <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+      <div class="bg-gradient-to-l from-brand-600 to-indigo-600 px-5 py-3.5">
+        <h3 class="text-white font-bold text-base">نموذج طلب الطباعة</h3>
+      </div>
+
+      <form id="printForm" class="p-5 space-y-4">
+        <!-- Name -->
+        <div>
+          <label for="studentName" class="block text-sm font-semibold text-slate-700 mb-1">الاسم بالكامل <span class="text-red-500">*</span></label>
+          <input type="text" id="studentName" required placeholder="مثال: أحمد محمد علي" autocomplete="name"
+            class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none transition text-slate-800 placeholder:text-slate-400 text-base" />
+        </div>
+
+        <!-- College -->
+        <div>
+          <label for="college" class="block text-sm font-semibold text-slate-700 mb-1">الكلية <span class="text-red-500">*</span></label>
+          <select id="college" required
+            class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none transition text-slate-800 bg-white text-base">
+            <option value="" disabled selected>اختر الكلية</option>
+            <option value="صيدلة">صيدلة</option>
+            <option value="تمريض">تمريض</option>
+            <option value="علاج طبيعي">علاج طبيعي</option>
+            <option value="طب بشري">طب بشري</option>
+            <option value="طب أسنان">طب أسنان</option>
+            <option value="إدارة">إدارة</option>
+            <option value="هندسة">هندسة</option>
+            <option value="آداب">آداب</option>
+            <option value="علوم صحية">علوم صحية</option>
+            <option value="ذكاء اصطناعي">ذكاء اصطناعي</option>
+          </select>
+        </div>
+
+        <!-- Student ID -->
+        <div>
+          <label for="studentId" class="block text-sm font-semibold text-slate-700 mb-1">الرقم الجامعي (ID) <span class="text-red-500">*</span></label>
+          <input type="text" id="studentId" required placeholder="مثال: 202301234" inputmode="numeric"
+            class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none transition text-slate-800 placeholder:text-slate-400 text-base" />
+        </div>
+
+        <!-- Phone -->
+        <div>
+          <label for="phone" class="block text-sm font-semibold text-slate-700 mb-1">رقم التليفون <span class="text-red-500">*</span></label>
+          <input type="tel" id="phone" required placeholder="01xxxxxxxxx" inputmode="tel"
+            class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none transition text-slate-800 placeholder:text-slate-400 text-base" />
+        </div>
+
+        <!-- Delivery Location -->
+        <div>
+          <label for="delivery" class="block text-sm font-semibold text-slate-700 mb-1">مكان التسليم <span class="text-red-500">*</span></label>
+          <input type="text" id="delivery" required placeholder="مثال: بوابة G2 أو عند كلية الهندسة"
+            class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none transition text-slate-800 placeholder:text-slate-400 text-base" />
+          <div class="flex flex-wrap gap-2 mt-2">
+            <button type="button" class="gate-btn text-xs bg-slate-100 hover:bg-brand-100 text-slate-700 hover:text-brand-700 px-3 py-1.5 rounded-lg border border-slate-200 transition" data-gate="بوابة G1">G1</button>
+            <button type="button" class="gate-btn text-xs bg-slate-100 hover:bg-brand-100 text-slate-700 hover:text-brand-700 px-3 py-1.5 rounded-lg border border-slate-200 transition" data-gate="بوابة G2">G2</button>
+            <button type="button" class="gate-btn text-xs bg-slate-100 hover:bg-brand-100 text-slate-700 hover:text-brand-700 px-3 py-1.5 rounded-lg border border-slate-200 transition" data-gate="بوابة G3">G3</button>
+            <button type="button" class="gate-btn text-xs bg-slate-100 hover:bg-brand-100 text-slate-700 hover:text-brand-700 px-3 py-1.5 rounded-lg border border-slate-200 transition" data-gate="عند الكلية">عند الكلية</button>
+          </div>
+        </div>
+
+        <!-- Print Options -->
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4">
+          <h4 class="font-bold text-slate-700 text-sm">خيارات الطباعة</h4>
+
+          <!-- Binding -->
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">التغليف <span class="text-red-500">*</span></label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2.5 cursor-pointer hover:border-brand-400 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
+                <input type="radio" name="binding" value="سلك" required class="text-brand-600" />
+                <span class="text-sm font-medium">سلك</span>
+              </label>
+              <label class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2.5 cursor-pointer hover:border-brand-400 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
+                <input type="radio" name="binding" value="تدبيس" class="text-brand-600" />
+                <span class="text-sm font-medium">تدبيس</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Pages per sheet -->
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">عدد الصفحات في الورقة <span class="text-red-500">*</span></label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2.5 cursor-pointer hover:border-brand-400 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
+                <input type="radio" name="pagesPerSheet" value="كل صفحة في ورقة" required class="text-brand-600" />
+                <span class="text-sm font-medium">كل صفحة في ورقة</span>
+              </label>
+              <label class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2.5 cursor-pointer hover:border-brand-400 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
+                <input type="radio" name="pagesPerSheet" value="كل صفحتين في ورقة" class="text-brand-600" />
+                <span class="text-sm font-medium">كل صفحتين في ورقة</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Sides -->
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">وجه الطباعة <span class="text-red-500">*</span></label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2.5 cursor-pointer hover:border-brand-400 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
+                <input type="radio" name="sides" value="وش بس" required class="text-brand-600" />
+                <span class="text-sm font-medium">وش بس</span>
+              </label>
+              <label class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2.5 cursor-pointer hover:border-brand-400 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
+                <input type="radio" name="sides" value="وش وظهر" class="text-brand-600" />
+                <span class="text-sm font-medium">وش وظهر</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Color -->
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">الألوان <span class="text-red-500">*</span></label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2.5 cursor-pointer hover:border-brand-400 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
+                <input type="radio" name="color" value="أبيض وأسود" required class="text-brand-600" />
+                <span class="text-sm font-medium">أبيض وأسود</span>
+              </label>
+              <label class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2.5 cursor-pointer hover:border-brand-400 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
+                <input type="radio" name="color" value="ألوان" class="text-brand-600" />
+                <span class="text-sm font-medium">ألوان</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- File Upload -->
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">الملفات المطلوب طباعتها <span class="text-red-500">*</span></label>
+
+          
+          <label for="fileInput" id="dropZone" class="drop-zone block border-2 border-dashed border-slate-300 rounded-xl p-7 text-center cursor-pointer hover:border-brand-400 hover:bg-brand-50/40 transition active:bg-brand-50">
+            <div class="text-4xl mb-2">📂</div>
+            <p class="font-semibold text-slate-700">اضغط هنا لاختيار الملفات</p>
+            <p class="text-sm text-slate-500 mt-1">PDF • صور • Word</p>
+            <p class="text-xs text-slate-400 mt-1">تقدر تختار أكتر من ملف مرة واحدة</p>
+          </label>
+          <input type="file" id="fileInput" multiple accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+
+          <div id="fileList" class="mt-3 space-y-2 hidden"></div>
+          
+          <div id="countingLoader" class="hidden mt-3 text-center text-sm text-brand-600 font-medium">
+            <span class="inline-flex items-center gap-2">
+              <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span>
+              جاري حساب عدد الصفحات...
+            </span>
+          </div>
+        </div>
+
+        <!-- Price Summary -->
+        <div id="priceBox" class="hidden bg-gradient-to-l from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-4">
+          <div class="flex justify-between items-center">
+            <div>
+              <div class="text-sm text-emerald-700 font-medium">إجمالي الصفحات</div>
+              <div id="totalPages" class="text-2xl font-extrabold text-emerald-800">0</div>
+            </div>
+            <div class="text-left">
+              <div class="text-sm text-emerald-700 font-medium">السعر الإجمالي</div>
+              <div id="totalPrice" class="text-2xl font-extrabold text-emerald-800">0.00 جنيه</div>
+            </div>
+          </div>
+          <p class="text-xs text-emerald-600 mt-2">* السعر = عدد الصفحات × ١ جنيه. الصور تُحسب كصفحة واحدة.</p>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" id="submitBtn"
+          class="w-full bg-gradient-to-l from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 active:scale-[0.98] text-white font-bold py-4 rounded-xl shadow-lg shadow-brand-500/25 transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed text-base">
+          <span id="btnText">إرسال الطلب على واتساب 📱</span>
+          <div id="btnSpinner" class="spinner hidden"></div>
+        </button>
+      </form>
+    </div>
+
+    <!-- Success Box -->
+    <div id="successBox" class="hidden mt-5 bg-green-50 border-2 border-green-300 rounded-2xl p-5 text-center">
+      <div class="text-4xl mb-2">✅</div>
+      <h3 class="text-lg font-bold text-green-800 mb-1">تم تجهيز الطلب بنجاح!</h3>
+      <p class="text-sm text-green-700 mb-1">رقم الطلب: <strong id="requestIdDisplay" class="text-green-900 text-base"></strong></p>
+      <p class="text-sm text-green-700 mb-4">اضغط الزر تحت عشان تفتح واتساب بالرسالة جاهزة</p>
+      <a id="whatsappLink" href="#" target="_blank" rel="noopener"
+        class="inline-flex items-center justify-center gap-2 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-md transition text-base">
+        📱 فتح واتساب وإرسال الطلب
+      </a>
+      <p class="text-xs text-green-600 mt-3">احفظ رقم الطلب عشان تقدر تعلّم إنه تم الاستلام بعدين</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="mt-8 grid grid-cols-3 gap-3">
+      <div class="bg-white rounded-xl border border-slate-100 p-3 text-center shadow-sm">
+        <div class="text-xl font-extrabold text-brand-700" id="statTotal">0</div>
+        <div class="text-[11px] text-slate-500 mt-0.5">إجمالي الطلبات</div>
+      </div>
+      <div class="bg-white rounded-xl border border-green-100 p-3 text-center shadow-sm">
+        <div class="text-xl font-extrabold text-green-600" id="statReceived">0</div>
+        <div class="text-[11px] text-slate-500 mt-0.5">تم الاستلام</div>
+      </div>
+      <div class="bg-white rounded-xl border border-amber-100 p-3 text-center shadow-sm">
+        <div class="text-xl font-extrabold text-amber-600" id="statPending">0</div>
+        <div class="text-[11px] text-slate-500 mt-0.5">لسه مستلمش</div>
+      </div>
+    </div>
+
+    <!-- Mark as Received Section -->
+    <div class="mt-5 bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+      <h4 class="font-bold text-slate-700 text-sm mb-3">✅ تحديث حالة الاستلام</h4>
+      <div class="flex gap-2">
+        <input type="text" id="markRequestId" placeholder="رقم الطلب (مثال: DP-1234)"
+          class="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none text-sm" />
+        <button type="button" id="markReceivedBtn"
+          class="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition whitespace-nowrap">
+          تم الاستلام
+        </button>
+      </div>
+      <p class="text-[11px] text-slate-400 mt-2">اكتب رقم الطلب واضغط "تم الاستلام" بعد ما الطالب ياخد الورق</p>
+    </div>
+
+    <!-- Recent Requests List -->
+    <div class="mt-5 bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <h4 class="font-bold text-slate-700 text-sm">📋 آخر الطلبات</h4>
+        <button type="button" id="clearAllBtn" class="text-xs text-red-500 hover:text-red-700">مسح الكل</button>
+      </div>
+      <div id="requestsList" class="space-y-2 max-h-80 overflow-y-auto">
+        <p class="text-sm text-slate-400 text-center py-4">مفيش طلبات لسه</p>
+      </div>
+    </div>
+
+    <!-- Info -->
+    <div class="mt-5 text-center text-sm text-slate-500 space-y-1">
+      <p>الرسالة هتتبعت على الرقم: <strong class="text-slate-700">01027834500</strong></p>
+      <p class="text-xs">الملفات بتترفع مؤقتًا عشان نقدر نبعتها في الرسالة</p>
+    </div>
+
+  </main>
+
+  <footer class="text-center py-5 text-xs text-slate-400">
+    Delta Prints | DTU 🖨️📄 — خدمة طلاب جامعة الدلتا
+  </footer>
+
+  <script>
+    // ========== Config ==========
+    const PAGE_PRICE = 1;
+    const WHATSAPP_NUMBER = "201027834500";
+    const STORAGE_KEY = "delta_prints_requests_v3";
+
+    if (typeof pdfjsLib !== "undefined") {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    }
+
+    // ========== Elements ==========
+    const form = document.getElementById("printForm");
+    const dropZone = document.getElementById("dropZone");
+    const fileInput = document.getElementById("fileInput");
+    const fileList = document.getElementById("fileList");
+    const priceBox = document.getElementById("priceBox");
+    const totalPagesEl = document.getElementById("totalPages");
+    const totalPriceEl = document.getElementById("totalPrice");
+    const submitBtn = document.getElementById("submitBtn");
+    const btnText = document.getElementById("btnText");
+    const btnSpinner = document.getElementById("btnSpinner");
+    const requestCountEl = document.getElementById("requestCount");
+    const countingLoader = document.getElementById("countingLoader");
+    const successBox = document.getElementById("successBox");
+    const whatsappLink = document.getElementById("whatsappLink");
+    const requestIdDisplay = document.getElementById("requestIdDisplay");
+    const requestsList = document.getElementById("requestsList");
+    const markRequestId = document.getElementById("markRequestId");
+    const markReceivedBtn = document.getElementById("markReceivedBtn");
+
+    let selectedFiles = [];
+
+    // ========== Storage ==========
+    function getRequests() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveRequests(list) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+      updateStats();
+      renderRequestsList();
+    }
+
+    function generateId() {
+      const num = Math.floor(1000 + Math.random() * 9000);
+      return "DP-" + num;
+    }
+
+    function updateStats() {
+      const list = getRequests();
+      const total = list.length;
+      const received = list.filter(function(r) { return r.status === "received"; }).length;
+      const pending = total - received;
+
+      requestCountEl.textContent = total;
+      document.getElementById("statTotal").textContent = total;
+      document.getElementById("statReceived").textContent = received;
+      document.getElementById("statPending").textContent = pending;
+    }
+
+    function renderRequestsList() {
+      const list = getRequests().slice().reverse();
+
+      if (list.length === 0) {
+        requestsList.innerHTML = '<p class="text-sm text-slate-400 text-center py-4">مفيش طلبات لسه</p>';
+        return;
+      }
+
+      requestsList.innerHTML = list.map(function (r) {
+        const statusBadge = r.status === "received"
+          ? '<span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">تم الاستلام ✓</span>'
+          : '<span class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">قيد الانتظار</span>';
+
+        const markBtn = r.status !== "received"
+          ? '<button type="button" data-id="' + r.id + '" class="mark-btn text-[11px] bg-green-50 hover:bg-green-100 text-green-700 px-2.5 py-1 rounded-lg border border-green-200 transition">تم الاستلام</button>'
+          : '';
+
+        return (
+          '<div class="border border-slate-100 rounded-xl p-3 bg-slate-50/50">' +
+            '<div class="flex items-start justify-between gap-2">' +
+              '<div class="min-w-0 flex-1">' +
+                '<div class="flex items-center gap-2 flex-wrap">' +
+                  '<span class="font-bold text-sm text-slate-800">' + escapeHtml(r.id) + '</span>' +
+                  statusBadge +
+                '</div>' +
+                '<div class="text-xs text-slate-600 mt-1">' + escapeHtml(r.name) + ' • ' + escapeHtml(r.college) + '</div>' +
+                '<div class="text-[11px] text-slate-500 mt-0.5">📍 ' + escapeHtml(r.delivery) + ' • ' + r.pages + ' صفحة • ' + r.price + ' ج</div>' +
+                '<div class="text-[10px] text-slate-400 mt-0.5">' + escapeHtml(r.binding || '') + ' • ' + escapeHtml(r.sides || '') + ' • ' + escapeHtml(r.color || '') + '</div>' +
+
+                '<div class="text-[10px] text-slate-400 mt-0.5">' + (r.date || '') + '</div>' +
+              '</div>' +
+              '<div class="flex-shrink-0">' + markBtn + '</div>' +
+            '</div>' +
+          '</div>'
+        );
+      }).join("");
+
+      requestsList.querySelectorAll(".mark-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          markAsReceived(btn.getAttribute("data-id"));
+        });
+      });
+    }
+
+    function markAsReceived(id) {
+      const list = getRequests();
+      const idx = list.findIndex(function(r) { return r.id === id; });
+      if (idx === -1) {
+        alert("رقم الطلب مش موجود");
+        return;
+      }
+      if (list[idx].status === "received") {
+        alert("الطلب ده متعلم عليه تم الاستلام قبل كده");
+        return;
+      }
+      list[idx].status = "received";
+      list[idx].receivedAt = new Date().toLocaleString("ar-EG");
+      saveRequests(list);
+    }
+
+    markReceivedBtn.addEventListener("click", function () {
+      const id = markRequestId.value.trim().toUpperCase();
+      if (!id) {
+        alert("اكتب رقم الطلب");
+        return;
+      }
+      markAsReceived(id);
+      markRequestId.value = "";
+    });
+
+    document.getElementById("clearAllBtn").addEventListener("click", function () {
+      if (confirm("هل أنت متأكد من مسح كل الطلبات؟")) {
+        localStorage.removeItem(STORAGE_KEY);
+        updateStats();
+        renderRequestsList();
+      }
+    });
+
+    document.querySelectorAll(".gate-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        document.getElementById("delivery").value = btn.getAttribute("data-gate");
+      });
+    });
+
+    updateStats();
+    renderRequestsList();
+
+    // ========== File Handling ==========
+    dropZone.addEventListener("dragover", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.add("dragover");
+    });
+    dropZone.addEventListener("dragleave", function (e) {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+    });
+    dropZone.addEventListener("drop", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.remove("dragover");
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+        handleFiles(e.dataTransfer.files);
+      }
+    });
+
+    fileInput.addEventListener("change", function () {
+      if (fileInput.files && fileInput.files.length) {
+        handleFiles(fileInput.files);
+        fileInput.value = "";
+      }
+    });
+
+    async function handleFiles(fileListObj) {
+      const files = Array.from(fileListObj || []);
+      if (!files.length) return;
+
+      countingLoader.classList.remove("hidden");
+
+      try {
+        for (const file of files) {
+          if (selectedFiles.some(function(f) { return f.name === file.name && f.size === file.size; })) continue;
+          const pages = await countPages(file);
+          selectedFiles.push({
+            file: file,
+            pages: pages,
+            name: file.name,
+            size: file.size
+          });
+        }
+      } catch (err) {
+        console.error(err);
+        alert("حدث خطأ أثناء قراءة الملفات.");
+      }
+
+      countingLoader.classList.add("hidden");
+      renderFileList();
+      updatePrice();
+      successBox.classList.add("hidden");
+    }
+
+    async function countPages(file) {
+      const name = (file.name || "").toLowerCase();
+      const isPdf = file.type === "application/pdf" || name.endsWith(".pdf");
+
+      if (isPdf && typeof pdfjsLib !== "undefined") {
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          return pdf.numPages || 1;
+        } catch (err) {
+          console.warn("PDF count failed:", err);
+          return 1;
+        }
+      }
+      return 1;
+    }
+
+    function renderFileList() {
+      if (selectedFiles.length === 0) {
+        fileList.classList.add("hidden");
+        fileList.innerHTML = "";
+        return;
+      }
+
+      fileList.classList.remove("hidden");
+      fileList.innerHTML = selectedFiles.map(function (f, i) {
+        const icon = f.name.toLowerCase().endsWith(".pdf") ? "📄" : "🖼️";
+        const sizeKb = (f.size / 1024).toFixed(1);
+        return (
+          '<div class="file-item flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5">' +
+            '<div class="flex items-center gap-2.5 min-w-0 flex-1">' +
+              '<span class="text-lg flex-shrink-0">' + icon + '</span>' +
+              '<div class="min-w-0">' +
+                '<div class="font-medium text-slate-800 truncate text-sm">' + escapeHtml(f.name) + '</div>' +
+                '<div class="text-xs text-slate-500">' + sizeKb + ' KB • ' + f.pages + ' صفحة</div>' +
+              '</div>' +
+            '</div>' +
+            '<button type="button" data-index="' + i + '" class="remove-file-btn text-red-500 hover:text-red-700 text-sm font-medium px-2 flex-shrink-0">حذف</button>' +
+          '</div>'
+        );
+      }).join("");
+
+      fileList.querySelectorAll(".remove-file-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          selectedFiles.splice(parseInt(btn.getAttribute("data-index"), 10), 1);
+          renderFileList();
+          updatePrice();
+        });
+      });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text || "";
+      return div.innerHTML;
+    }
+
+    function updatePrice() {
+      const totalPages = selectedFiles.reduce(function (sum, f) { return sum + f.pages; }, 0);
+      const totalPrice = totalPages * PAGE_PRICE;
+
+      if (totalPages > 0) {
+        priceBox.classList.remove("hidden");
+        totalPagesEl.textContent = totalPages;
+        totalPriceEl.textContent = totalPrice.toFixed(2) + " جنيه";
+      } else {
+        priceBox.classList.add("hidden");
+      }
+    }
+
+    // ========== Upload ==========
+    async function uploadFile(file) {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("https://tmpfiles.org/api/v1/upload", {
+        method: "POST",
+        body: formData
+      });
+
+      if (!res.ok) throw new Error("فشل رفع الملف: " + file.name);
+
+      const data = await res.json();
+      if (data.status !== "success" || !data.data || !data.data.url) {
+        throw new Error("استجابة غير متوقعة من خدمة الرفع");
+      }
+
+      let url = data.data.url;
+      if (url.indexOf("tmpfiles.org/") !== -1 && url.indexOf("/dl/") === -1) {
+        url = url.replace("tmpfiles.org/", "tmpfiles.org/dl/");
+      }
+      return url;
+    }
+
+    // ========== Submit ==========
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      if (selectedFiles.length === 0) {
+        alert("من فضلك اختر ملف واحد على الأقل");
+        return;
+      }
+
+      const name = document.getElementById("studentName").value.trim();
+      const college = document.getElementById("college").value;
+      const studentId = document.getElementById("studentId").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+      const delivery = document.getElementById("delivery").value.trim();
+
+      const bindingEl = document.querySelector('input[name="binding"]:checked');
+      const pagesPerSheetEl = document.querySelector('input[name="pagesPerSheet"]:checked');
+      const sidesEl = document.querySelector('input[name="sides"]:checked');
+      const colorEl = document.querySelector('input[name="color"]:checked');
+
+      const binding = bindingEl ? bindingEl.value : "";
+      const pagesPerSheet = pagesPerSheetEl ? pagesPerSheetEl.value : "";
+      const sides = sidesEl ? sidesEl.value : "";
+      const color = colorEl ? colorEl.value : "";
+
+      if (!name || !college || !studentId || !phone || !delivery || !binding || !pagesPerSheet || !sides || !color) {
+        alert("من فضلك أكمل كل الحقول المطلوبة بما فيها خيارات الطباعة");
+        return;
+      }
+
+
+      submitBtn.disabled = true;
+      btnText.textContent = "جاري تجهيز الطلب...";
+      btnSpinner.classList.remove("hidden");
+      successBox.classList.add("hidden");
+
+      const totalPages = selectedFiles.reduce(function (sum, f) { return sum + f.pages; }, 0);
+      const totalPrice = (totalPages * PAGE_PRICE).toFixed(2);
+      const requestId = generateId();
+
+      // Save request first (always works offline)
+      const list = getRequests();
+      list.push({
+        id: requestId,
+        name: name,
+        college: college,
+        studentId: studentId,
+        phone: phone,
+        delivery: delivery,
+        binding: binding,
+        pagesPerSheet: pagesPerSheet,
+        sides: sides,
+        color: color,
+        pages: totalPages,
+        price: totalPrice,
+        files: selectedFiles.map(function(f) { return f.name; }),
+        status: "pending",
+        date: new Date().toLocaleString("ar-EG")
+      });
+      saveRequests(list);
+
+
+      // Try to upload files (may fail on local file:// or content://)
+      let links = [];
+      let uploadSuccess = false;
+
+      try {
+        btnText.textContent = "جاري رفع الملفات...";
+        links = await Promise.all(
+          selectedFiles.map(function (f) { return uploadFile(f.file); })
+        );
+        uploadSuccess = true;
+      } catch (err) {
+        console.warn("Upload failed, will send without links:", err);
+        uploadSuccess = false;
+      }
+
+      // Build WhatsApp message
+      let message = "🖨️ *طلب طباعة جديد - Delta Prints | DTU*\n\n";
+      message += "🔖 *رقم الطلب:* " + requestId + "\n\n";
+      message += "👤 *الاسم:* " + name + "\n";
+      message += "🎓 *الكلية:* " + college + "\n";
+      message += "🆔 *الرقم الجامعي:* " + studentId + "\n";
+      message += "📱 *التليفون:* " + phone + "\n";
+      message += "📍 *مكان التسليم:* " + delivery + "\n\n";
+      message += "🔧 *خيارات الطباعة:*\n";
+      message += "• التغليف: " + binding + "\n";
+      message += "• الصفحات: " + pagesPerSheet + "\n";
+      message += "• الوجه: " + sides + "\n";
+      message += "• الألوان: " + color + "\n\n";
+      message += "📄 *عدد الصفحات:* " + totalPages + "\n";
+      message += "💰 *السعر:* " + totalPrice + " جنيه\n\n";
+
+
+      if (uploadSuccess && links.length > 0) {
+        message += "📎 *روابط الملفات:*\n";
+        selectedFiles.forEach(function (f, i) {
+          message += (i + 1) + ". " + f.name + " (" + f.pages + " صفحة)\n" + links[i] + "\n\n";
+        });
+      } else {
+        message += "📎 *الملفات المطلوبة:*\n";
+        selectedFiles.forEach(function (f, i) {
+          message += (i + 1) + ". " + f.name + " (" + f.pages + " صفحة)\n";
+        });
+        message += "\n⚠️ *يرجى إرفاق الملفات يدويًا في المحادثة*\n";
+      }
+
+      message += "\n---\nتم الإرسال من موقع Delta Prints";
+
+      const waUrl = "https://wa.me/" + WHATSAPP_NUMBER + "?text=" + encodeURIComponent(message);
+
+      requestIdDisplay.textContent = requestId;
+      whatsappLink.href = waUrl;
+      successBox.classList.remove("hidden");
+      successBox.scrollIntoView({ behavior: "smooth", block: "center" });
+
+      // Update success message based on upload result
+      const successMsg = successBox.querySelector("p.text-sm.text-green-700.mb-4");
+      if (successMsg) {
+        if (uploadSuccess) {
+          successMsg.textContent = "اضغط الزر تحت عشان تفتح واتساب بالرسالة وروابط الملفات جاهزة";
+        } else {
+          successMsg.textContent = "اضغط الزر تحت عشان تفتح واتساب، وبعدين ارفق الملفات يدويًا في المحادثة";
+        }
+      }
+
+      try { window.open(waUrl, "_blank"); } catch (e) {}
+
+      submitBtn.disabled = false;
+      btnText.textContent = "إرسال الطلب على واتساب 📱";
+      btnSpinner.classList.add("hidden");
+    });
+  </script>
+</body>
+</html>
+
